@@ -1,7 +1,7 @@
 import { Construct } from 'constructs';
 import { App, TerraformStack } from 'cdktf';
 import { AwsProvider } from '@cdktf/provider-aws';
-import { AwsOnDemndDynamodb } from './constructs';
+import { AwsOnDemndDynamodb, AwsApiGateway } from './constructs';
 
 class MyStack extends TerraformStack {
   constructor(scope: Construct, name: string) {
@@ -20,6 +20,11 @@ class MyStack extends TerraformStack {
         { name: 'uuid', type: 'S' },
         { name: 'h_hkid', type: 'S' },
       ],
+    });
+
+    new AwsApiGateway(this, 'aws-apigateway', {
+      name: 'my-rest-api',
+      description: 'My REST API',
     });
   }
 }
