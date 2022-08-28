@@ -1,6 +1,6 @@
 import { Construct } from 'constructs';
 import { App, TerraformStack } from 'cdktf';
-import { AwsProvider } from '@cdktf/provider-aws';
+import { AwsProvider, apigateway } from '@cdktf/provider-aws';
 import { AwsOnDemndDynamodb, AwsApiGateway } from './constructs';
 
 class MyStack extends TerraformStack {
@@ -22,9 +22,13 @@ class MyStack extends TerraformStack {
       ],
     });
 
-    new AwsApiGateway(this, 'aws-apigateway', {
+    const api = new AwsApiGateway(this, 'aws-apigateway', {
       name: 'my-rest-api',
       description: 'My REST API',
+    });
+
+    new apigateway.ApiGatewayDeployment(this, 'aws-apigateway-deployment', {
+      restApiId: api.api.id,
     });
   }
 }
