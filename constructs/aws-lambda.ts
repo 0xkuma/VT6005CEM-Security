@@ -73,6 +73,13 @@ export class AwsLambdaFunction extends Construct {
         type: 'AWS_PROXY',
         uri: this.lambda.invokeArn,
       });
+
+      new lambdafunction.LambdaPermission(this, `${functionName}-apigateway-permission`, {
+        action: 'lambda:InvokeFunction',
+        functionName: this.lambda.functionName,
+        principal: 'apigateway.amazonaws.com',
+        sourceArn: `${integration.apigateway!.api.executionArn}/*/*`,
+      });
     }
   }
 }
