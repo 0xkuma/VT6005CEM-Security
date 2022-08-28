@@ -13,10 +13,10 @@ export interface AwsApiGatewayProps {
 
 export class AwsApiGateway extends Construct {
   public readonly api: apigateway.ApiGatewayRestApi;
+  public readonly root: apigateway.ApiGatewayMethod;
 
   constructor(scope: Construct, id: string, props: AwsApiGatewayProps) {
     super(scope, id);
-
     const { name, description, endpointConfiguration } = props;
     this.api = new apigateway.ApiGatewayRestApi(this, `${name}-rest-api`, {
       name: name,
@@ -24,6 +24,12 @@ export class AwsApiGateway extends Construct {
       endpointConfiguration: endpointConfiguration || {
         types: ['REGIONAL'],
       },
+    });
+    this.root = new apigateway.ApiGatewayMethod(this, `${name}-root`, {
+      restApiId: this.api.id,
+      resourceId: this.api.rootResourceId,
+      httpMethod: 'ANY',
+      authorization: 'NONE',
     });
   }
 }
