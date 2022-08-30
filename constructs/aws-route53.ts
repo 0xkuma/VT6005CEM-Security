@@ -16,18 +16,15 @@ export interface AwsRoute53Props {
 
 export class AwsRoute53 extends Construct {
   public readonly zone: route53.Route53Zone;
+  public readonly addRoute53Record: (record: IRecordSet) => void;
 
   constructor(scope: Construct, id: string, props: AwsRoute53Props) {
     super(scope, id);
 
     const { name, records, tags } = props;
 
-    this.zone = new route53.Route53Zone(this, 'zone', {
-      name: name,
-      tags: tags || {},
-    });
-
-    for (let record of records) {
+    // create addRoute53Record function to add a record to a record set
+    this.addRoute53Record = (record: IRecordSet) => {
       switch (record.type) {
         case 'A':
           new route53.Route53Record(this, `${record.records}-${record.name}-recordSet`, {
@@ -48,6 +45,15 @@ export class AwsRoute53 extends Construct {
           });
           break;
       }
+    };
+
+    this.zone = new route53.Route53Zone(this, 'zone', {
+      name: name,
+      tags: tags || {},
+    });
+
+    for (let record of records) {
+      this.addRoute53Record(record);
     }
   }
 }
