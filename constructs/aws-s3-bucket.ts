@@ -14,6 +14,7 @@ export interface AwsS3BucketProps {
   readonly serverSideEncryptionConfiguration?: s3.S3BucketServerSideEncryptionConfiguration;
   readonly website?: s3.S3BucketWebsite;
   readonly corsRule?: s3.S3BucketCorsRule[];
+  readonly forceDestroy?: boolean;
   readonly tags?: { [key: string]: string };
 }
 
@@ -22,16 +23,25 @@ export class AwsS3Bucket extends Construct {
 
   constructor(scope: Construct, id: string, props: AwsS3BucketProps) {
     super(scope, id);
-    const { bucket, acl, policy, serverSideEncryptionConfiguration, website, corsRule, tags } =
-      props;
-    this.bucket = new s3.S3Bucket(this, `${bucket}-bucket`, {
+    const {
       bucket,
       acl,
       policy,
       serverSideEncryptionConfiguration,
       website,
       corsRule,
+      forceDestroy,
       tags,
+    } = props;
+    this.bucket = new s3.S3Bucket(this, `${bucket}-bucket`, {
+      bucket,
+      acl,
+      policy: policy || '',
+      serverSideEncryptionConfiguration: serverSideEncryptionConfiguration,
+      website: website || {},
+      corsRule: corsRule || [],
+      forceDestroy: forceDestroy || false,
+      tags: tags || {},
     });
   }
 }
