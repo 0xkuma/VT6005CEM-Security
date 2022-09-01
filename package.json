@@ -9,6 +9,8 @@
     "get": "cdktf get",
     "build": "tsc",
     "synth": "cdktf synth",
+    "deploy": "cdktf deploy --auto-approve",
+    "destroy": "cdktf destroy --auto-approve",
     "compile": "tsc --pretty",
     "watch": "tsc -w",
     "test": "jest",
