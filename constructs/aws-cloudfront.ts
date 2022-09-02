@@ -1,7 +1,9 @@
 import { Construct } from 'constructs';
 import { cloudfront, datasources, s3 } from '@cdktf/provider-aws';
+import { AwsRoute53 } from './aws-route53';
 
 export interface AwsCloudFrontProps {
+  readonly aliases: string[];
   readonly enabled: boolean;
   readonly defaultRootObject: string;
   readonly defaultCacheBehavior: cloudfront.CloudfrontDistributionDefaultCacheBehavior;
@@ -10,7 +12,7 @@ export interface AwsCloudFrontProps {
   readonly viewerCertificate: cloudfront.CloudfrontDistributionViewerCertificate;
   readonly priceClass: 'PriceClass_100' | 'PriceClass_200' | 'PriceClass_All';
   readonly tags?: { [key: string]: string };
-  // readonly route53: cloudfront.CloudfrontDistribution;
+  readonly route53: AwsRoute53;
   readonly bucket: s3.S3Bucket;
 }
 
@@ -20,6 +22,7 @@ export class AwsCloudfront extends Construct {
     super(scope, id);
 
     const {
+      aliases,
       enabled,
       defaultRootObject,
       defaultCacheBehavior,
@@ -27,6 +30,7 @@ export class AwsCloudfront extends Construct {
       viewerCertificate,
       priceClass,
       tags,
+      route53,
       bucket,
     } = props;
 
@@ -73,6 +77,7 @@ export class AwsCloudfront extends Construct {
     }));
 
     this.distribution = new cloudfront.CloudfrontDistribution(this, 'distribution', {
+      aliases,
       enabled,
       defaultRootObject,
       defaultCacheBehavior,
@@ -82,5 +87,16 @@ export class AwsCloudfront extends Construct {
       priceClass,
       tags: tags || {},
     });
+
+    route53.addRoute53Record(
+      {
+        name: 'www.vt6005cem.space',
+        type: 'CNAME',
+        ttl: 60,
+        records: [this.distribution.domainName],
+      },
+      'cloudfront',
+      '0',
+    );
   }
 }
