@@ -6,3 +6,4 @@ export * from './aws-lambda';
 export * from './aws-route53';
 export * from './aws-cloudfront';
 export * from './aws-acm';
+export * from './aws-ses';
