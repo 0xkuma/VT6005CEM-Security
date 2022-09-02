@@ -1,7 +1,14 @@
 import { Construct } from 'constructs';
 import { App, TerraformStack } from 'cdktf';
 import { AwsProvider } from '@cdktf/provider-aws';
-import { AwsOnDemndDynamodb, AwsS3Bucket, AwsCloudfront } from './constructs';
+import {
+  // AwsOnDemndDynamodb,
+  AwsS3Bucket,
+  AwsCloudfront,
+  AwsRoute53,
+  AwsAcmCertificate,
+  AwsSes,
+} from './constructs';
 
 class MyStack extends TerraformStack {
   constructor(scope: Construct, name: string) {
@@ -12,15 +19,15 @@ class MyStack extends TerraformStack {
       region: 'us-east-1',
     });
 
-    new AwsOnDemndDynamodb(this, 'aws-ondemand-dynamodb', {
-      name: 'my-ondemand-dynamodb',
-      hashKey: 'uuid',
-      rangeKey: 'h_hkid',
-      attributes: [
-        { name: 'uuid', type: 'S' },
-        { name: 'h_hkid', type: 'S' },
-      ],
-    });
+    // new AwsOnDemndDynamodb(this, 'aws-ondemand-dynamodb', {
+    //   name: 'my-ondemand-dynamodb',
+    //   hashKey: 'uuid',
+    //   rangeKey: 'h_hkid',
+    //   attributes: [
+    //     { name: 'uuid', type: 'S' },
+    //     { name: 'h_hkid', type: 'S' },
+    //   ],
+    // });
 
     // const aws_api = new AwsApiGateway(this, 'aws-apigateway', {
     //   name: 'my-rest-api',
@@ -33,8 +40,8 @@ class MyStack extends TerraformStack {
 
     const aws_s3 = new AwsS3Bucket(this, 'aws-s3-bucket', {
       bucket: 'vt6005cem-security-bucket',
-      acl: 'public-read',
-      policy: '{}',
+      acl: 'private',
+      policy: '',
       serverSideEncryptionConfiguration: {
         rule: {
           bucketKeyEnabled: true,
@@ -49,7 +56,20 @@ class MyStack extends TerraformStack {
       forceDestroy: true,
     });
 
+    const aws_route53 = new AwsRoute53(this, 'aws-route53', {
+      name: 'vt6005cem.space',
+      records: [],
+      forceDestroy: true,
+    });
+
+    const aws_acm = new AwsAcmCertificate(this, 'aws-acm-certificate', {
+      domainName: '*.vt6005cem.space',
+      validationMethod: 'DNS',
+      route53: aws_route53,
+    });
+
     new AwsCloudfront(this, 'aws-cloudfront', {
+      aliases: ['*.vt6005cem.space'],
       enabled: true,
       defaultRootObject: 'index.html',
       defaultCacheBehavior: {
@@ -72,9 +92,18 @@ class MyStack extends TerraformStack {
         },
       },
       viewerCertificate: {
-        cloudfrontDefaultCertificate: true,
+        acmCertificateArn: aws_acm.certificate.arn,
+        sslSupportMethod: 'sni-only',
+        minimumProtocolVersion: 'TLSv1.2_2021',
       },
       priceClass: 'PriceClass_100',
+      route53: aws_route53,
+      bucket: aws_s3.bucket,
+    });
+
+    new AwsSes(this, 'aws-ses', {
+      domain: 'vt6005cem.space',
+      route53: aws_route53,
     });
   }
 }
