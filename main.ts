@@ -4,6 +4,7 @@ import { AwsProvider } from '@cdktf/provider-aws';
 import {
   // AwsOnDemndDynamodb,
   AwsS3Bucket,
+  AwsLambdaFunction,
   AwsCloudfront,
   AwsRoute53,
   AwsAcmCertificate,
@@ -54,6 +55,20 @@ class MyStack extends TerraformStack {
         indexDocument: 'index.html',
       },
       forceDestroy: true,
+    });
+
+    new AwsLambdaFunction(this, 'aws-lambda-function', {
+      functionName: 'hello-world',
+      description: 'Hello World',
+      s3Bucket: aws_s3.bucket.bucket,
+      s3Key: 'lambda.zip',
+      handler: 'hello-world.handler',
+      role: 'arn:aws:iam::097759201858:role/LambdaAdmin',
+      environment: {
+        variables: {
+          AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1',
+        },
+      },
     });
 
     const aws_route53 = new AwsRoute53(this, 'aws-route53', {
