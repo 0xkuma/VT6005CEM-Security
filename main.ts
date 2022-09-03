@@ -5,6 +5,7 @@ import {
   // AwsOnDemndDynamodb,
   AwsS3Bucket,
   AwsLambdaFunction,
+  AwsApiGateway,
   AwsCloudfront,
   AwsRoute53,
   AwsAcmCertificate,
@@ -30,15 +31,6 @@ class MyStack extends TerraformStack {
     //   ],
     // });
 
-    // const aws_api = new AwsApiGateway(this, 'aws-apigateway', {
-    //   name: 'my-rest-api',
-    //   description: 'My REST API',
-    // });
-
-    // new apigateway.ApiGatewayDeployment(this, 'aws-apigateway-deployment', {
-    //   restApiId: aws_api.api.id,
-    // });
-
     const aws_s3 = new AwsS3Bucket(this, 'aws-s3-bucket', {
       bucket: 'vt6005cem-security-bucket',
       acl: 'private',
@@ -57,19 +49,50 @@ class MyStack extends TerraformStack {
       forceDestroy: true,
     });
 
-    new AwsLambdaFunction(this, 'aws-lambda-function', {
-      functionName: 'hello-world',
-      description: 'Hello World',
-      s3Bucket: aws_s3.bucket.bucket,
-      s3Key: 'lambda.zip',
-      handler: 'hello-world.handler',
-      role: 'arn:aws:iam::097759201858:role/LambdaAdmin',
-      environment: {
-        variables: {
-          AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1',
+    const aws_api = new AwsApiGateway(this, 'aws-apigateway', {
+      name: 'vt6005cem.space',
+      description: 'vt6005cem.space rest api',
+    });
+
+    const lb = {
+      'hello-world': {
+        function: new AwsLambdaFunction(this, 'aws-lambda-function', {
+          functionName: 'hello-world',
+          description: 'Hello World',
+          s3Bucket: aws_s3.bucket.bucket,
+          s3Key: 'lambda.zip',
+          handler: 'hello-world.handler',
+          role: 'arn:aws:iam::097759201858:role/LambdaAdmin',
+          environment: {
+            variables: {
+              AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1',
+            },
+          },
+          integration: {
+            type: 'ApiGateway',
+            apiGateway: aws_api.api,
+          },
+        }),
+        integration: {
+          apigateway: {
+            api: aws_api.api,
+            parentId: aws_api.api.rootResourceId,
+            pathPart: 'hello-world',
+            httpMethod: 'GET',
+          },
         },
       },
-    });
+    };
+    for (const [key, value] of Object.entries(lb)) {
+      let res = aws_api.apiGatewayResource(
+        key,
+        value.integration.apigateway.parentId,
+        value.integration.apigateway.pathPart,
+      );
+      aws_api.apiGatewayMethod(key, res, value.integration.apigateway.httpMethod);
+      aws_api.apiGatewayIntegration(key, res, 'GET', value.function.lambda.invokeArn);
+    }
+    aws_api.apiGatewayDeployment('vt6005cem.space', 'dev');
 
     const aws_route53 = new AwsRoute53(this, 'aws-route53', {
       name: 'vt6005cem.space',
