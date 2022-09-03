@@ -2,14 +2,9 @@ import { Construct } from 'constructs';
 import { lambdafunction, apigateway } from '@cdktf/provider-aws';
 import { Fn } from 'cdktf';
 
-interface IApigateway {
-  api: apigateway.ApiGatewayRestApi;
-  root: apigateway.ApiGatewayMethod;
-  httpMethod: string;
-}
-
 interface IIntergration {
-  readonly apigateway?: IApigateway;
+  readonly type?: 'ApiGateway';
+  readonly apiGateway?: apigateway.ApiGatewayRestApi;
 }
 
 export interface LambdaFunctionProps {
@@ -69,21 +64,12 @@ export class AwsLambdaFunction extends Construct {
       tags: tags || {},
     });
 
-    if (integration?.apigateway) {
-      new apigateway.ApiGatewayIntegration(this, `${functionName}-integration`, {
-        restApiId: integration.apigateway!.api.id,
-        resourceId: integration.apigateway!.root.id,
-        httpMethod: integration.apigateway!.httpMethod,
-        integrationHttpMethod: 'POST',
-        type: 'AWS_PROXY',
-        uri: this.lambda.invokeArn,
-      });
-
+    if (integration?.type === 'ApiGateway') {
       new lambdafunction.LambdaPermission(this, `${functionName}-apigateway-permission`, {
         action: 'lambda:InvokeFunction',
         functionName: this.lambda.functionName,
         principal: 'apigateway.amazonaws.com',
-        sourceArn: `${integration.apigateway!.api.executionArn}/*/*`,
+        sourceArn: `${integration.apiGateway!.executionArn}/*/*`,
       });
     }
   }
