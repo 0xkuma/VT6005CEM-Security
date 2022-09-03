@@ -1,0 +1,27 @@
+{
+  "name": "lambda",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "prebuild": "rm -rf dist",
+    "build": "esbuild *.ts --bundle --sourcemap --platform=node --target=es2022 --outdir=dist/",
+    "postbuild": "cd dist && zip -r lambda.zip *.js*",
+    "deploy": "aws s3 cp dist/lambda.zip s3://vt6005cem-security-bucket/lambda.zip"
+  },
+  "dependencies": {
+    "@cdktf/provider-aws": "^9.0.15",
+    "@middy/core": "^3.3.0",
+    "@middy/http-error-handler": "^3.3.0",
+    "@middy/http-event-normalizer": "^3.3.0",
+    "@middy/http-header-normalizer": "^3.3.0"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-dynamodb": "^3.163.0",
+    "@types/aws-lambda": "^8.10.102",
+    "@types/node": "^18.7.13",
+    "esbuild": "^0.15.6",
+    "ts-node": "^10.9.1",
+    "typescript": "^4.7.4"
+  }
+}
