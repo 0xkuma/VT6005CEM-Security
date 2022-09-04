@@ -1,8 +1,8 @@
 import { Construct } from 'constructs';
 import { App, TerraformStack } from 'cdktf';
-import { AwsProvider } from '@cdktf/provider-aws';
+import { apigateway, AwsProvider } from '@cdktf/provider-aws';
 import {
-  // AwsOnDemndDynamodb,
+  AwsOnDemndDynamodb,
   AwsS3Bucket,
   AwsLambdaFunction,
   AwsApiGateway,
@@ -11,6 +11,21 @@ import {
   AwsAcmCertificate,
   AwsSes,
 } from './constructs';
+
+interface IApiResourceList {
+  [key: string]: apigateway.ApiGatewayResource;
+}
+
+interface IApiResource {
+  [key: string]: {
+    path: string;
+    child?: {
+      [key: string]: {
+        path: string;
+      };
+    };
+  };
+}
 
 class MyStack extends TerraformStack {
   constructor(scope: Construct, name: string) {
@@ -21,15 +36,15 @@ class MyStack extends TerraformStack {
       region: 'us-east-1',
     });
 
-    // new AwsOnDemndDynamodb(this, 'aws-ondemand-dynamodb', {
-    //   name: 'my-ondemand-dynamodb',
-    //   hashKey: 'uuid',
-    //   rangeKey: 'h_hkid',
-    //   attributes: [
-    //     { name: 'uuid', type: 'S' },
-    //     { name: 'h_hkid', type: 'S' },
-    //   ],
-    // });
+    new AwsOnDemndDynamodb(this, 'aws-ondemand-dynamodb', {
+      name: 'my-ondemand-dynamodb',
+      hashKey: 'uuid',
+      rangeKey: 'h_hkid',
+      attributes: [
+        { name: 'uuid', type: 'S' },
+        { name: 'h_hkid', type: 'S' },
+      ],
+    });
 
     const aws_s3 = new AwsS3Bucket(this, 'aws-s3-bucket', {
       bucket: 'vt6005cem-security-bucket',
@@ -53,6 +68,29 @@ class MyStack extends TerraformStack {
       name: 'vt6005cem.space',
       description: 'vt6005cem.space rest api',
     });
+
+    const apiResourceList: IApiResourceList = {};
+    const apiResource: IApiResource = {
+      'hello-world1': {
+        path: 'hello-world1',
+        child: {
+          'hello-world-child': {
+            path: 'hello-world-child',
+          },
+        },
+      },
+    };
+
+    const createApiResource = (api: AwsApiGateway, resource: IApiResource, parentId: string) => {
+      for (const [key, value] of Object.entries(resource)) {
+        const apiResource = api.apiGatewayResource(key, parentId, value.path);
+        apiResourceList[key] = apiResource;
+        if (value.child) {
+          createApiResource(api, value.child, apiResource.id);
+        }
+      }
+    };
+    createApiResource(aws_api, apiResource, aws_api.api.rootResourceId);
 
     const lb = {
       'hello-world': {
