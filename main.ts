@@ -1,6 +1,7 @@
 import { Construct } from 'constructs';
 import { App, TerraformStack } from 'cdktf';
 import { apigateway, AwsProvider } from '@cdktf/provider-aws';
+import { NullProvider, Resource } from '@cdktf/provider-null';
 import {
   AwsOnDemndDynamodb,
   AwsS3Bucket,
@@ -35,6 +36,8 @@ class MyStack extends TerraformStack {
     new AwsProvider(this, 'aws', {
       region: 'us-east-1',
     });
+
+    new NullProvider(this, 'null');
 
     new AwsOnDemndDynamodb(this, 'aws-ondemand-dynamodb', {
       name: 'my-ondemand-dynamodb',
@@ -71,8 +74,8 @@ class MyStack extends TerraformStack {
 
     const apiResourceList: IApiResourceList = {};
     const apiResource: IApiResource = {
-      'hello-world1': {
-        path: 'hello-world1',
+      'hello-world': {
+        path: 'hello-world',
         child: {
           'hello-world-child': {
             path: 'hello-world-child',
@@ -86,6 +89,9 @@ class MyStack extends TerraformStack {
         const apiResource = api.apiGatewayResource(key, parentId, value.path);
         apiResourceList[key] = apiResource;
         if (value.child) {
+          new Resource(this, `${key}-null-resource`, {
+            dependsOn: [apiResource],
+          });
           createApiResource(api, value.child, apiResource.id);
         }
       }
@@ -94,7 +100,7 @@ class MyStack extends TerraformStack {
 
     const lb = {
       'hello-world': {
-        function: new AwsLambdaFunction(this, 'aws-lambda-function', {
+        function: new AwsLambdaFunction(this, 'hello-world', {
           functionName: 'hello-world',
           description: 'Hello World',
           s3Bucket: aws_s3.bucket.bucket,
@@ -114,21 +120,24 @@ class MyStack extends TerraformStack {
         integration: {
           apigateway: {
             api: aws_api.api,
-            parentId: aws_api.api.rootResourceId,
-            pathPart: 'hello-world',
+            resource: apiResourceList['hello-world'],
             httpMethod: 'GET',
           },
         },
       },
     };
     for (const [key, value] of Object.entries(lb)) {
-      let res = aws_api.apiGatewayResource(
+      aws_api.apiGatewayMethod(
         key,
-        value.integration.apigateway.parentId,
-        value.integration.apigateway.pathPart,
+        value.integration.apigateway.resource,
+        value.integration.apigateway.httpMethod,
       );
-      aws_api.apiGatewayMethod(key, res, value.integration.apigateway.httpMethod);
-      aws_api.apiGatewayIntegration(key, res, 'GET', value.function.lambda.invokeArn);
+      aws_api.apiGatewayIntegration(
+        key,
+        value.integration.apigateway.resource,
+        'GET',
+        value.function.lambda.invokeArn,
+      );
     }
     aws_api.apiGatewayDeployment('vt6005cem.space', 'dev');
 
