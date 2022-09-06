@@ -1,6 +1,7 @@
 import middy from '@middy/core';
 import httpEventNormalizer from '@middy/http-event-normalizer';
 import httpHeaderNormalizer from '@middy/http-header-normalizer';
+import httpJsonBodyParser from '@middy/http-json-body-parser';
 import httpErrorHandler from '@middy/http-error-handler';
 import { api } from './lib/api';
 
@@ -20,28 +21,34 @@ const ddbDocClient = DynamoDBDocumentClient.from(ddbClient, {
     removeUndefinedValues: true,
   },
 });
-const TABLE_NAME = process.env.TABLE_NAME || 'my-ondemand-dynamodb';
+const TABLE_NAME = process.env.TABLE_NAME || 'vt6005cem.space';
 
 const originalHandler = async (event: any) => {
   const reqMethod = event.httpMethod;
-  // const reqPath = event.path;
+  const reqPath = event.path;
   switch (reqMethod) {
     case 'GET':
       return api(200, { message: 'Hello World' }, {});
     case 'POST':
-      const res = await ddbDocClient.send(
-        new PutCommand({
-          TableName: TABLE_NAME,
-          Item: {
-            uuid: '03a77c90-dea7-5e18-a9fc-5c7de8689d21',
-            h_hkid: 'bbb2ece6-ed57-559b-a298-6ce259112a5b',
-          },
-        }),
-      );
-      console.log(res);
-      if (res.$metadata.httpStatusCode === 200) {
-        return api(200, { message: 'Add Record Success' }, {});
+      switch (reqPath) {
+        case '/booking':
+          console.log(event.body);
+          const { hkid } = event.body;
+          const res = await ddbDocClient.send(
+            new PutCommand({
+              TableName: TABLE_NAME,
+              Item: {
+                h_hkid: hkid,
+              },
+            }),
+          );
+          console.log(res);
+          if (res.$metadata.httpStatusCode === 200) {
+            return api(200, { message: 'Add Record Success' }, {});
+          }
+          break;
       }
+
       return api(500, { message: 'Add Record Failed' }, {});
     case 'PUT':
       return api(200, { message: 'Hello World' }, {});
@@ -55,51 +62,37 @@ const originalHandler = async (event: any) => {
 export const handler = middy(originalHandler)
   .use(httpEventNormalizer())
   .use(httpHeaderNormalizer())
+  .use(httpJsonBodyParser())
   .use(httpErrorHandler());
 
-originalHandler({
-  resource: '/hello-world',
-  path: '/hello-world',
-  httpMethod: 'POST',
-  headers: null,
-  multiValueHeaders: null,
-  queryStringParameters: {},
-  multiValueQueryStringParameters: {},
-  pathParameters: {},
-  stageVariables: null,
-  requestContext: {
-    resourceId: '3so1u3',
-    resourcePath: '/hello-world',
+handler(
+  {
+    resource: '/hello-world',
+    path: '/booking',
     httpMethod: 'POST',
-    extendedRequestId: 'YCqGaFHPoAMF2tA=',
-    requestTime: '06/Sep/2022:14:19:33 +0000',
-    path: '/hello-world',
-    accountId: '097759201858',
-    protocol: 'HTTP/1.1',
-    stage: 'test-invoke-stage',
-    domainPrefix: 'testPrefix',
-    requestTimeEpoch: 1662473973642,
-    requestId: '2038e22d-b649-46e6-bd87-c2904f500c4d',
-    identity: {
-      cognitoIdentityPoolId: null,
-      cognitoIdentityId: null,
-      apiKey: 'test-invoke-api-key',
-      principalOrgId: null,
-      cognitoAuthenticationType: null,
-      userArn: 'arn:aws:iam::097759201858:user/Admin',
-      apiKeyId: 'test-invoke-api-key-id',
-      userAgent:
-        'aws-internal/3 aws-sdk-java/1.12.239 Linux/5.4.204-124.362.amzn2int.x86_64 OpenJDK_64-Bit_Server_VM/25.332-b08 java/1.8.0_332 vendor/Oracle_Corporation cfg/retry-mode/standard',
-      accountId: '097759201858',
-      caller: 'AIDARNQXHBJBFC4ERUWPI',
-      sourceIp: 'test-invoke-source-ip',
-      accessKey: 'ASIARNQXHBJBADSEQIXT',
-      cognitoAuthenticationProvider: null,
-      user: 'AIDARNQXHBJBFC4ERUWPI',
+    headers: {
+      'Content-Type': 'application/json',
     },
-    domainName: 'testPrefix.testDomainName',
-    apiId: 'bqart4i8j0',
+    multiValueHeaders: null,
+    queryStringParameters: {},
+    multiValueQueryStringParameters: {},
+    pathParameters: {},
+    stageVariables: null,
+    body: JSON.stringify({ hkid: '123456' }),
+    isBase64Encoded: false,
   },
-  body: null,
-  isBase64Encoded: false,
-}).then(console.log);
+  {
+    callbackWaitsForEmptyEventLoop: true,
+    functionName: 'vt6005cem.space',
+    functionVersion: '1',
+    invokedFunctionArn: 'arn:aws:lambda:us-east-1:123456789012:function:vt6005cem.space',
+    memoryLimitInMB: '128',
+    awsRequestId: '1234567890',
+    logGroupName: '/aws/lambda/vt6005cem.space',
+    logStreamName: '2021/01/01/[$LATEST]1234567890',
+    getRemainingTimeInMillis: () => 1234567890,
+    done: (error: Error, result: any) => void 0,
+    fail: (error: Error) => void 0,
+    succeed: (messageOrObject: any) => void 0,
+  },
+).then(console.log);
