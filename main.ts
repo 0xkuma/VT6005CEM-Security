@@ -1,5 +1,5 @@
 import { Construct } from 'constructs';
-import { App, TerraformStack } from 'cdktf';
+import { App, TerraformOutput, TerraformStack } from 'cdktf';
 import { apigateway, AwsProvider } from '@cdktf/provider-aws';
 import { NullProvider, Resource } from '@cdktf/provider-null';
 import {
@@ -40,11 +40,9 @@ class MyStack extends TerraformStack {
     new NullProvider(this, 'null');
 
     new AwsOnDemndDynamodb(this, 'aws-ondemand-dynamodb', {
-      name: 'my-ondemand-dynamodb',
-      hashKey: 'uuid',
-      rangeKey: 'h_hkid',
+      name: 'vt6005cem.space',
+      hashKey: 'h_hkid',
       attributes: [
-        { name: 'uuid', type: 'S' },
         { name: 'h_hkid', type: 'S' },
       ],
     });
@@ -139,7 +137,10 @@ class MyStack extends TerraformStack {
         value.function.lambda.invokeArn,
       );
     }
-    aws_api.apiGatewayDeployment('vt6005cem.space', 'dev');
+    const apiDeployment = aws_api.apiGatewayDeployment('vt6005cem.space', 'dev');
+    new TerraformOutput(this, 'api-gateway-url', {
+      value: apiDeployment.invokeUrl,
+    });
 
     const aws_route53 = new AwsRoute53(this, 'aws-route53', {
       name: 'vt6005cem.space',
