@@ -39,11 +39,19 @@ class MyStack extends TerraformStack {
 
     new NullProvider(this, 'null');
 
-    new AwsOnDemndDynamodb(this, 'aws-ondemand-dynamodb', {
-      name: 'vt6005cem.space',
+    new AwsOnDemndDynamodb(this, 'vt6005cem.space-booking', {
+      name: 'vt6005cem.space-booking',
       hashKey: 'h_hkid',
       attributes: [
         { name: 'h_hkid', type: 'S' },
+      ],
+    });
+
+    new AwsOnDemndDynamodb(this, 'vt6005cem.space-time-slot', {
+      name: 'vt6005cem.space-time-slot',
+      hashKey: 'slot_date',
+      attributes: [
+        { name: 'slot_date', type: 'S' },
       ],
     });
 
