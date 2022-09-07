@@ -24,6 +24,7 @@
   "dependencies": {
     "@cdktf/provider-aws": "^9.0.15",
     "@cdktf/provider-null": "^2.0.46",
+    "@middy/http-json-body-parser": "^3.3.1",
     "cdktf": "^0.13.0-pre.25",
     "constructs": "^10.1.85"
   },
