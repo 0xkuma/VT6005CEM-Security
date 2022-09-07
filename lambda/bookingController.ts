@@ -65,6 +65,18 @@ const addDataToDynamoDB = async (tableName: string, item: any) => {
   return res;
 };
 
+const isExistRecord = async (h_hkid: string) => {
+  const res = await ddbDocClient.send(
+    new GetCommand({
+      TableName: BOOKING_TABLE,
+      Key: {
+        h_hkid,
+      },
+    }),
+  );
+  return res.Item != undefined ? true : false;
+};
+
 const originalHandler = async (event: any) => {
   const reqMethod = event.httpMethod;
   const reqPath = event.path;
@@ -78,9 +90,12 @@ const originalHandler = async (event: any) => {
       switch (reqPath) {
         case '/booking':
           const { hkid, e_name, slot_date } = event.body;
+          const h_hkid = hashValue(hkid);
+          if (await isExistRecord(h_hkid)) {
+            return api(400, { message: 'HKID already exist' }, {});
+          }
           const currDateStatus = await getCurrDateStatus(slot_date);
           if (currDateStatus.Item == undefined || currDateStatus.Item.isHasVacant) {
-            const h_hkid = hashValue(hkid);
             let vancantNum = currDateStatus.Item == undefined ? 0 : currDateStatus.Item.total;
             const bookingRes = await addDataToDynamoDB(BOOKING_TABLE, {
               h_hkid: h_hkid,
