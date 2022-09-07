@@ -1,3 +1,4 @@
+import { createHash, createCipheriv } from 'crypto';
 import middy from '@middy/core';
 import httpEventNormalizer from '@middy/http-event-normalizer';
 import httpHeaderNormalizer from '@middy/http-header-normalizer';
@@ -9,7 +10,7 @@ const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
 const {
   DynamoDBDocumentClient,
   PutCommand,
-  // GetCommand,
+  GetCommand,
   // UpdateCommand,
   // DeleteCommand,
 } = require('@aws-sdk/lib-dynamodb');
@@ -21,35 +22,87 @@ const ddbDocClient = DynamoDBDocumentClient.from(ddbClient, {
     removeUndefinedValues: true,
   },
 });
-const TABLE_NAME = process.env.TABLE_NAME || 'vt6005cem.space';
+const BOOKING_TABLE = process.env.BOOKING_TABLE || 'vt6005cem.space-booking';
+const TIME_SLOT_TABLE = process.env.TIME_SLOT_TABLE || 'vt6005cem.space-time-slot';
+
+const hashValue = (value: string) => {
+  return createHash('sha256').update(value).digest('hex');
+};
+
+const encryptValue = (encrypt_iv: string, value: any) => {
+  const key = process.env.ENCRYPT_KEY || '8ecb54b1d59359818750382052a7bb7a';
+  const iv = encrypt_iv.slice(0, 16);
+  const algorithm = 'aes-256-cbc';
+  const cipher = createCipheriv(algorithm, key, iv);
+  let encrypted = cipher.update(value, 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+  return encrypted;
+};
+
+const isEqualValue = (value: any) => {
+  return value === hashValue(value);
+};
+
+const getCurrDateStatus = async (slot_date: string) => {
+  const currDateStatus = await ddbDocClient.send(
+    new GetCommand({
+      TableName: TIME_SLOT_TABLE,
+      Key: {
+        slot_date,
+      },
+    }),
+  );
+  return currDateStatus;
+};
+
+const addDataToDynamoDB = async (tableName: string, item: any) => {
+  const res = await ddbDocClient.send(
+    new PutCommand({
+      TableName: tableName,
+      Item: item,
+    }),
+  );
+  return res;
+};
 
 const originalHandler = async (event: any) => {
   const reqMethod = event.httpMethod;
   const reqPath = event.path;
   switch (reqMethod) {
     case 'GET':
+      Object.entries(event.body).forEach(([key, value]) => {
+        console.log(key, value);
+      });
       return api(200, { message: 'Hello World' }, {});
     case 'POST':
       switch (reqPath) {
         case '/booking':
-          console.log(event.body);
-          const { hkid } = event.body;
-          const res = await ddbDocClient.send(
-            new PutCommand({
-              TableName: TABLE_NAME,
-              Item: {
-                h_hkid: hkid,
-              },
-            }),
-          );
-          console.log(res);
-          if (res.$metadata.httpStatusCode === 200) {
-            return api(200, { message: 'Add Record Success' }, {});
+          const { hkid, e_name, slot_date } = event.body;
+          const currDateStatus = await getCurrDateStatus(slot_date);
+          if (currDateStatus.Item == undefined || currDateStatus.Item.isHasVacant) {
+            const h_hkid = hashValue(hkid);
+            let vancantNum = currDateStatus.Item == undefined ? 0 : currDateStatus.Item.total;
+            const bookingRes = await addDataToDynamoDB(BOOKING_TABLE, {
+              h_hkid: h_hkid,
+              e_name: encryptValue(h_hkid, e_name),
+              slot_date: slot_date,
+            });
+            const timeSlotRes = await addDataToDynamoDB(TIME_SLOT_TABLE, {
+              slot_date: slot_date,
+              total: vancantNum + 1,
+              isHasVacant: vancantNum + 1 < 10,
+            });
+            if (
+              bookingRes.$metadata.httpStatusCode === 200 &&
+              timeSlotRes.$metadata.httpStatusCode === 200
+            ) {
+              return api(200, { message: 'Add Record Success' }, {});
+            }
           }
-          break;
+          return api(500, { message: 'Add Record Failed' }, {});
+        default:
+          return api(404, { message: 'Not Found' }, {});
       }
-
-      return api(500, { message: 'Add Record Failed' }, {});
     case 'PUT':
       return api(200, { message: 'Hello World' }, {});
     case 'DELETE':
@@ -78,7 +131,7 @@ handler(
     multiValueQueryStringParameters: {},
     pathParameters: {},
     stageVariables: null,
-    body: JSON.stringify({ hkid: '123456' }),
+    body: JSON.stringify({ hkid: '123456', e_name: 'John', slot_date: '2021-01-01' }),
     isBase64Encoded: false,
   },
   {
