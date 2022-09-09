@@ -50,6 +50,18 @@ export class AwsSes extends Construct {
       count++;
     }
 
+    route53.addRoute53Record(
+      {
+        name: `_dmarc`,
+        type: 'TXT',
+        ttl: 600,
+        records: [`v=DMARC1; p=none;`],
+      },
+      'ses',
+      count,
+    );
+    count++;
+
     new ses.SesDomainIdentityVerification(this, 'domain-identity-verification', {
       domain: this.domain.id,
     });
