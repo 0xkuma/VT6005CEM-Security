@@ -4,22 +4,31 @@ import httpHeaderNormalizer from '@middy/http-header-normalizer';
 import httpJsonBodyParser from '@middy/http-json-body-parser';
 import httpErrorHandler from '@middy/http-error-handler';
 import { api } from './lib/api';
-import { isExistRecord, addDataToDynamoDB, getDateFromDynamoDB } from './lib/dynamodb';
-import { hashValue, encryptValue } from './lib/crypto';
+import { isExistRecord, addDataToDynamoDB, getDateFromDynamoDB } from './lib/ddbController';
+import { hashValue, encryptValue, decryptValue } from './lib/crypto';
 import { BOOKING_TABLE, TIME_SLOT_TABLE } from './config';
 
 const originalHandler = async (event: any) => {
-  const { hkid } = event.body;
-  if (await isExistRecord(BOOKING_TABLE, { h_hkid: hashValue(hkid) })) {
-    const res = await getDateFromDynamoDB(BOOKING_TABLE, { h_hkid: hashValue(hkid) }, [
+  const { email } = event.body;
+  const en_email = encryptValue(hashValue(email), email);
+  if (await isExistRecord(BOOKING_TABLE, { email: en_email })) {
+    const res = await getDateFromDynamoDB(BOOKING_TABLE, { email: en_email }, [
+      'booking_slot',
+      'c_name',
       'e_name',
-      'slot_date',
+      'location',
+      'type',
     ]);
     if (res.$metadata.httpStatusCode === 200) {
-      const data = { ...res.Item, hkid: hkid };
-      return api(200, { message: 'Success', data: data }, {});
+      const de_c_name = decryptValue(hashValue(email), res.Item.c_name);
+      const de_e_name = decryptValue(hashValue(email), res.Item.e_name);
+      return api(
+        200,
+        { message: 'Success', data: { ...res.Item, c_name: de_c_name, e_name: de_e_name } },
+        {},
+      );
     }
-    return api(500, { message: 'Failed' }, {});
+    return api(500, { message: 'Get Record Failed' }, {});
   }
   return api(400, { message: 'Record not found' }, {});
 };
@@ -43,7 +52,7 @@ handler(
     multiValueQueryStringParameters: {},
     pathParameters: {},
     stageVariables: null,
-    body: JSON.stringify({ hkid: '123456' }),
+    body: JSON.stringify({ email: 'abc@gmail.com' }),
     isBase64Encoded: false,
   },
   {
