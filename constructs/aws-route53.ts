@@ -5,7 +5,7 @@ interface IRecordSet {
   readonly name: string;
   readonly type: string;
   readonly ttl: number;
-  readonly records: string[];
+  readonly records?: string[];
 }
 
 export interface AwsRoute53Props {
