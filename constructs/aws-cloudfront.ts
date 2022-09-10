@@ -1,6 +1,7 @@
 import { Construct } from 'constructs';
 import { cloudfront, datasources, s3 } from '@cdktf/provider-aws';
 import { AwsRoute53 } from './aws-route53';
+import { AwsWafv2 } from './aws-wafv2';
 
 export interface AwsCloudFrontProps {
   readonly aliases: string[];
@@ -14,6 +15,7 @@ export interface AwsCloudFrontProps {
   readonly tags?: { [key: string]: string };
   readonly route53: AwsRoute53;
   readonly bucket: s3.S3Bucket;
+  readonly wafv2: AwsWafv2;
 }
 
 export class AwsCloudfront extends Construct {
@@ -32,6 +34,7 @@ export class AwsCloudfront extends Construct {
       tags,
       route53,
       bucket,
+      wafv2,
     } = props;
 
     const accountId = new datasources.DataAwsCallerIdentity(scope, 'account-id').accountId;
@@ -85,6 +88,7 @@ export class AwsCloudfront extends Construct {
       restrictions,
       viewerCertificate,
       priceClass,
+      webAclId: wafv2.webAcl.arn,
       tags: tags || {},
     });
 
