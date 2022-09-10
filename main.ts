@@ -11,6 +11,7 @@ import {
   AwsRoute53,
   AwsAcmCertificate,
   AwsSes,
+  AwsWafv2,
 } from './constructs';
 
 interface IApiResourceList {
@@ -42,9 +43,7 @@ class MyStack extends TerraformStack {
     new AwsOnDemndDynamodb(this, 'vt6005cem.space-booking', {
       name: 'vt6005cem.space-booking',
       hashKey: 'email',
-      attributes: [
-        { name: 'email', type: 'S' },
-      ],
+      attributes: [{ name: 'email', type: 'S' }],
     });
 
     new AwsOnDemndDynamodb(this, 'vt6005cem.space-time-slot', {
@@ -75,9 +74,71 @@ class MyStack extends TerraformStack {
       forceDestroy: true,
     });
 
+    const aws_route53 = new AwsRoute53(this, 'aws-route53', {
+      name: 'vt6005cem.space',
+      records: [],
+      forceDestroy: true,
+    });
+
+    const aws_acm = new AwsAcmCertificate(this, 'aws-acm-certificate', {
+      domainName: '*.vt6005cem.space',
+      validationMethod: 'DNS',
+      route53: aws_route53,
+    });
+
+    const aws_wafv2 = new AwsWafv2(this, 'aws-wafv2', {
+      name: 'vt6005cem_space',
+    });
+
+    new Resource(this, 'wafv2-null-resource', {
+      dependsOn: [aws_wafv2.webAcl],
+    });
+
+    new AwsCloudfront(this, 'aws-cloudfront', {
+      aliases: ['*.vt6005cem.space'],
+      enabled: true,
+      defaultRootObject: 'index.html',
+      defaultCacheBehavior: {
+        allowedMethods: ['DELETE', 'GET', 'HEAD', 'OPTIONS', 'PATCH', 'POST', 'PUT'],
+        cachedMethods: ['GET', 'HEAD'],
+        compress: true,
+        targetOriginId: aws_s3.bucket.id,
+        viewerProtocolPolicy: 'redirect-to-https',
+        forwardedValues: {
+          queryString: false,
+          cookies: {
+            forward: 'none',
+          },
+        },
+      },
+      origin: [{ domainName: aws_s3.bucket.bucketDomainName, originId: aws_s3.bucket.id }],
+      restrictions: {
+        geoRestriction: {
+          restrictionType: 'none',
+        },
+      },
+      viewerCertificate: {
+        acmCertificateArn: aws_acm.certificate.arn,
+        sslSupportMethod: 'sni-only',
+        minimumProtocolVersion: 'TLSv1.2_2021',
+      },
+      priceClass: 'PriceClass_100',
+      route53: aws_route53,
+      bucket: aws_s3.bucket,
+      wafv2: aws_wafv2,
+    });
+
+    new AwsSes(this, 'aws-ses', {
+      domain: 'vt6005cem.space',
+      route53: aws_route53,
+    });
+
     const aws_api = new AwsApiGateway(this, 'aws-apigateway', {
       name: 'vt6005cem.space',
       description: 'vt6005cem.space rest api',
+      domanName: 'vt6005cem.space',
+      aws_acm: aws_acm,
+      aws_route53: aws_route53,
     });
 
     const apiResourceList: IApiResourceList = {};
@@ -150,56 +211,6 @@ class MyStack extends TerraformStack {
     const apiDeployment = aws_api.apiGatewayDeployment('vt6005cem.space', 'dev');
     new TerraformOutput(this, 'api-gateway-url', {
       value: apiDeployment.invokeUrl,
-    });
-
-    const aws_route53 = new AwsRoute53(this, 'aws-route53', {
-      name: 'vt6005cem.space',
-      records: [],
-      forceDestroy: true,
-    });
-
-    const aws_acm = new AwsAcmCertificate(this, 'aws-acm-certificate', {
-      domainName: '*.vt6005cem.space',
-      validationMethod: 'DNS',
-      route53: aws_route53,
-    });
-
-    new AwsCloudfront(this, 'aws-cloudfront', {
-      aliases: ['*.vt6005cem.space'],
-      enabled: true,
-      defaultRootObject: 'index.html',
-      defaultCacheBehavior: {
-        allowedMethods: ['DELETE', 'GET', 'HEAD', 'OPTIONS', 'PATCH', 'POST', 'PUT'],
-        cachedMethods: ['GET', 'HEAD'],
-        compress: true,
-        targetOriginId: aws_s3.bucket.id,
-        viewerProtocolPolicy: 'redirect-to-https',
-        forwardedValues: {
-          queryString: false,
-          cookies: {
-            forward: 'none',
-          },
-        },
-      },
-      origin: [{ domainName: aws_s3.bucket.bucketDomainName, originId: aws_s3.bucket.id }],
-      restrictions: {
-        geoRestriction: {
-          restrictionType: 'none',
-        },
-      },
-      viewerCertificate: {
-        acmCertificateArn: aws_acm.certificate.arn,
-        sslSupportMethod: 'sni-only',
-        minimumProtocolVersion: 'TLSv1.2_2021',
-      },
-      priceClass: 'PriceClass_100',
-      route53: aws_route53,
-      bucket: aws_s3.bucket,
-    });
-
-    new AwsSes(this, 'aws-ses', {
-      domain: 'vt6005cem.space',
-      route53: aws_route53,
     });
   }
 }
