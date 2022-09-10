@@ -18,6 +18,7 @@
   },
   "devDependencies": {
     "@aws-sdk/client-dynamodb": "^3.163.0",
+    "@aws-sdk/client-sesv2": "^3.165.0",
     "@aws-sdk/lib-dynamodb": "^3.163.0",
     "@types/aws-lambda": "^8.10.102",
     "@types/node": "^18.7.13",
