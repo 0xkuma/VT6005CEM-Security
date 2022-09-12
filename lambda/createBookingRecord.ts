@@ -38,42 +38,42 @@ export const handler = middy(originalHandler)
   .use(httpJsonBodyParser())
   .use(httpErrorHandler());
 
-handler(
-  {
-    resource: '/hello-world',
-    path: '/booking',
-    httpMethod: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    multiValueHeaders: null,
-    queryStringParameters: {},
-    multiValueQueryStringParameters: {},
-    pathParameters: {},
-    stageVariables: null,
-    body: JSON.stringify({
-      email: 'cheungkamhung1998@gmail.com',
-      e_name: 'John',
-      c_name: 'John',
-      type: '1',
-      booking_date: '2021-01-01',
-      slot: '1',
-      location: 'Wan Chai',
-    }),
-    isBase64Encoded: false,
-  },
-  {
-    callbackWaitsForEmptyEventLoop: true,
-    functionName: 'vt6005cem.space',
-    functionVersion: '1',
-    invokedFunctionArn: 'arn:aws:lambda:us-east-1:123456789012:function:vt6005cem.space',
-    memoryLimitInMB: '128',
-    awsRequestId: '1234567890',
-    logGroupName: '/aws/lambda/vt6005cem.space',
-    logStreamName: '2021/01/01/[$LATEST]1234567890',
-    getRemainingTimeInMillis: () => 1234567890,
-    done: (error: Error, result: any) => void 0,
-    fail: (error: Error) => void 0,
-    succeed: (messageOrObject: any) => void 0,
-  },
-).then(console.log);
+// handler(
+//   {
+//     resource: '/hello-world',
+//     path: '/booking',
+//     httpMethod: 'POST',
+//     headers: {
+//       'Content-Type': 'application/json',
+//     },
+//     multiValueHeaders: null,
+//     queryStringParameters: {},
+//     multiValueQueryStringParameters: {},
+//     pathParameters: {},
+//     stageVariables: null,
+//     body: JSON.stringify({
+//       email: 'cheungkamhung1998@gmail.com',
+//       e_name: 'John',
+//       c_name: 'John',
+//       type: '1',
+//       booking_date: '2021-01-01',
+//       slot: '1',
+//       location: 'Wan Chai',
+//     }),
+//     isBase64Encoded: false,
+//   },
+//   {
+//     callbackWaitsForEmptyEventLoop: true,
+//     functionName: 'vt6005cem.space',
+//     functionVersion: '1',
+//     invokedFunctionArn: 'arn:aws:lambda:us-east-1:123456789012:function:vt6005cem.space',
+//     memoryLimitInMB: '128',
+//     awsRequestId: '1234567890',
+//     logGroupName: '/aws/lambda/vt6005cem.space',
+//     logStreamName: '2021/01/01/[$LATEST]1234567890',
+//     getRemainingTimeInMillis: () => 1234567890,
+//     done: (error: Error, result: any) => void 0,
+//     fail: (error: Error) => void 0,
+//     succeed: (messageOrObject: any) => void 0,
+//   },
+// ).then(console.log);
