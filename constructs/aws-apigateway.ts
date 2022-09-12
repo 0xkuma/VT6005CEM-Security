@@ -98,60 +98,14 @@ export class AwsApiGateway extends Construct {
       uri: string,
       type: string,
     ) => {
-      if (httpMethod === 'OPTIONS') {
-        const methodResponse = new apigateway.ApiGatewayMethodResponse(
-          this,
-          `${name}-method-response`,
-          {
-            restApiId: this.api.id,
-            resourceId: resource.id,
-            httpMethod: httpMethod,
-            statusCode: '200',
-            responseModels: {
-              'application/json': 'Empty',
-            },
-            responseParameters: {
-              'method.response.header.Access-Control-Allow-Headers': true,
-              'method.response.header.Access-Control-Allow-Methods': true,
-              'method.response.header.Access-Control-Allow-Origin': true,
-            },
-          },
-        );
-
-        new apigateway.ApiGatewayIntegrationResponse(this, `${name}-integration-response`, {
-          restApiId: this.api.id,
-          resourceId: resource.id,
-          httpMethod: httpMethod,
-          statusCode: methodResponse.statusCode,
-          responseParameters: {
-            'method.response.header.Access-Control-Allow-Headers':
-              'integration.response.header.Access-Control-Allow-Headers',
-            'method.response.header.Access-Control-Allow-Methods':
-              'integration.response.header.Access-Control-Allow-Methods',
-          },
-        });
-
-        return new apigateway.ApiGatewayIntegration(this, `${name}-integration`, {
-          restApiId: this.api.id,
-          resourceId: resource.id,
-          httpMethod: httpMethod,
-          type: type,
-          requestTemplates: {
-            'application/json': JSON.stringify({
-              statusCode: 200,
-            }),
-          },
-        });
-      } else {
-        return new apigateway.ApiGatewayIntegration(this, `${name}-integration`, {
-          restApiId: this.api.id,
-          resourceId: resource.id,
-          httpMethod: httpMethod,
-          integrationHttpMethod: 'POST',
-          type: type,
-          uri: uri,
-        });
-      }
+      return new apigateway.ApiGatewayIntegration(this, `${name}-integration`, {
+        restApiId: this.api.id,
+        resourceId: resource.id,
+        httpMethod: httpMethod,
+        integrationHttpMethod: 'POST',
+        uri: uri,
+        type: type,
+      });
     };
 
     this.apiGatewayDeployment = (name: string, stageName: string) => {
