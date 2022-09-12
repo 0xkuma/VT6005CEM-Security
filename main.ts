@@ -151,6 +151,9 @@ class MyStack extends TerraformStack {
           },
         },
       },
+      createBookingRecord: {
+        path: 'createBookingRecord',
+      },
     };
 
     const createApiResource = (api: AwsApiGateway, resource: IApiResource, parentId: string) => {
@@ -167,6 +170,8 @@ class MyStack extends TerraformStack {
     };
     createApiResource(aws_api, apiResource, aws_api.api.rootResourceId);
 
+    const aws_role = 'arn:aws:iam::097759201858:role/LambdaAdmin';
+
     const lb = {
       'hello-world': {
         function: new AwsLambdaFunction(this, 'hello-world', {
@@ -175,7 +180,7 @@ class MyStack extends TerraformStack {
           s3Bucket: aws_s3.bucket.bucket,
           s3Key: 'lambda.zip',
           handler: 'hello-world.handler',
-          role: 'arn:aws:iam::097759201858:role/LambdaAdmin',
+          role: aws_role,
           environment: {
             variables: {
               AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1',
@@ -187,26 +192,86 @@ class MyStack extends TerraformStack {
           },
         }),
         integration: {
-          apigateway: {
-            api: aws_api.api,
-            resource: apiResourceList['hello-world'],
-            httpMethod: 'GET',
+          apigateway: [
+            {
+              api: aws_api.api,
+              resource: apiResourceList['hello-world'],
+              httpMethod: 'GET',
+              type: 'AWS_PROXY',
+            },
+          ],
+        },
+      },
+      createBookingRecord: {
+        function: new AwsLambdaFunction(this, 'createBookingRecord', {
+          functionName: 'createBookingRecord',
+          description: 'Hello World',
+          s3Bucket: aws_s3.bucket.bucket,
+          s3Key: 'lambda.zip',
+          handler: 'createBookingRecord.handler',
+          role: aws_role,
+          environment: {
+            variables: {
+              AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1',
+            },
           },
+          integration: {
+            type: 'ApiGateway',
+            apiGateway: aws_api.api,
+          },
+        }),
+        integration: {
+          apigateway: [
+            {
+              api: aws_api.api,
+              resource: apiResourceList['createBookingRecord'],
+              httpMethod: 'POST',
+              type: 'AWS_PROXY',
+            },
+          ],
+        },
+      },
+      optionMethod: {
+        function: new AwsLambdaFunction(this, 'optionMethod', {
+          functionName: 'optionMethod',
+          description: 'Hello World',
+          s3Bucket: aws_s3.bucket.bucket,
+          s3Key: 'lambda.zip',
+          handler: 'optionMethod.handler',
+          role: aws_role,
+          environment: {
+            variables: {
+              AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1',
+            },
+          },
+          integration: {
+            type: 'ApiGateway',
+            apiGateway: aws_api.api,
+          },
+        }),
+        integration: {
+          apigateway: [
+            {
+              api: aws_api.api,
+              resource: apiResourceList['createBookingRecord'],
+              httpMethod: 'OPTIONS',
+              type: 'AWS_PROXY',
+            },
+          ],
         },
       },
     };
     for (const [key, value] of Object.entries(lb)) {
-      aws_api.apiGatewayMethod(
-        key,
-        value.integration.apigateway.resource,
-        value.integration.apigateway.httpMethod,
-      );
-      aws_api.apiGatewayIntegration(
-        key,
-        value.integration.apigateway.resource,
-        'GET',
-        value.function.lambda.invokeArn,
-      );
+      for (const [key2, value2] of Object.entries(value.integration.apigateway)) {
+        aws_api.apiGatewayMethod(`${key}-${key2}`, value2.resource, value2.httpMethod);
+        aws_api.apiGatewayIntegration(
+          `${key}-${key2}`,
+          value2.resource,
+          value2.httpMethod,
+          value.function.lambda.invokeArn,
+          value2.type,
+        );
+      }
     }
     const apiDeployment = aws_api.apiGatewayDeployment('vt6005cem.space', 'dev');
     new TerraformOutput(this, 'api-gateway-url', {
