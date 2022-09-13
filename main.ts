@@ -154,6 +154,14 @@ class MyStack extends TerraformStack {
       createBookingRecord: {
         path: 'createBookingRecord',
       },
+      confirmEmail: {
+        path: 'confirmEmail',
+        child: {
+          confirmEmailChild: {
+            path: '{id}',
+          },
+        },
+      },
     };
 
     const createApiResource = (api: AwsApiGateway, resource: IApiResource, parentId: string) => {
@@ -255,6 +263,35 @@ class MyStack extends TerraformStack {
               api: aws_api.api,
               resource: apiResourceList['createBookingRecord'],
               httpMethod: 'OPTIONS',
+              type: 'AWS_PROXY',
+            },
+          ],
+        },
+      },
+      confirmEmail: {
+        function: new AwsLambdaFunction(this, 'confirmEmail', {
+          functionName: 'confirmEmail',
+          description: 'Hello World',
+          s3Bucket: aws_s3.bucket.bucket,
+          s3Key: 'lambda.zip',
+          handler: 'confirmEmail.handler',
+          role: aws_role,
+          environment: {
+            variables: {
+              AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1',
+            },
+          },
+          integration: {
+            type: 'ApiGateway',
+            apiGateway: aws_api.api,
+          },
+        }),
+        integration: {
+          apigateway: [
+            {
+              api: aws_api.api,
+              resource: apiResourceList['confirmEmailChild'],
+              httpMethod: 'GET',
               type: 'AWS_PROXY',
             },
           ],
