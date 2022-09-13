@@ -24,7 +24,11 @@ const originalHandler = async (event: any) => {
     confirmed: false,
   });
   if (res.$metadata.httpStatusCode === 200) {
-    const res = await sendEmail(email, 'Booking Confirmation', 'Your booking has been confirmed');
+    const res = await sendEmail(
+      email,
+      'Booking Confirmation',
+      `Please click the link to confirm your booking: https://api.vt6005cem.space/confirmEmail/${en_email}`,
+    );
     if (res.$metadata.httpStatusCode === 200) {
       return api(200, { message: 'Success' }, {});
     }
