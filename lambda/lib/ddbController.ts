@@ -3,7 +3,7 @@ const {
   DynamoDBDocumentClient,
   PutCommand,
   GetCommand,
-  // UpdateCommand,
+  UpdateCommand,
   // DeleteCommand,
 } = require('@aws-sdk/lib-dynamodb');
 const ddbClient = new DynamoDBClient({
@@ -44,4 +44,21 @@ export const isExistRecord = async (tableName: string, key: any) => {
     }),
   );
   return res.Item != undefined ? true : false;
+};
+
+export const updateDataToDynamoDB = async (
+  tableName: string,
+  key: any,
+  updateExpression: any,
+  expressionAttributeValues: any,
+) => {
+  const res = await ddbDocClient.send(
+    new UpdateCommand({
+      TableName: tableName,
+      Key: key,
+      UpdateExpression: updateExpression,
+      ExpressionAttributeValues: expressionAttributeValues,
+    }),
+  );
+  return res;
 };
