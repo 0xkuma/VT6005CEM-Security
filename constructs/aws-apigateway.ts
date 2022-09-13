@@ -111,8 +111,13 @@ export class AwsApiGateway extends Construct {
     this.apiGatewayDeployment = (name: string, stageName: string) => {
       const depolyment = new apigateway.ApiGatewayDeployment(this, `${name}-deployment`, {
         restApiId: this.api.id,
-        stageName: stageName,
       });
+      new apigateway.ApiGatewayStage(this, `${name}-stage`, {
+        restApiId: this.api.id,
+        stageName: stageName,
+        deploymentId: depolyment.id,
+      });
+
       new apigateway.ApiGatewayBasePathMapping(this, `${name}-base-path-mapping`, {
         apiId: this.api.id,
         stageName: stageName,
